@@ -2,89 +2,49 @@
 
 ## What/Why
 
-This is a sample script to test a patch that adds support for curls new HTTP/2 server push support.
-
-It includes these instructions, a simple node.js HTTP/2 server with server push support and an example request (`node-server/index.js`) and the PHP script to test the new features.
+This is a sample script/docker container build to test a patch that adds support for curls new HTTP/2 server push support.
 
 ## Setup
 
-To run this example, you must first install `curl` 7.45.0 with HTTP/2 support.
+### Docker
 
-You can check this with `curl --version`, and make sure `http2` is listed (and that it's >= 7.4.50)
-
-If you use a mac, this can be done with homebrew:
+Build and run the docker container:
 
 ```sh
-$ brew install curl --with-nghttp2 --with-openssl
+$ docker build -t $USER/php-http2-push-example .
+$ docker run $USER/php-http2-push-example
 ```
 
-You will also need node/npm >= 5.0:
+To debug it yourself:
 
-```sh
-$ brew install node
+Start the docker container:
+
+```
+$ docker run -ti $USER/php-http2-push-example /bin/bash
 ```
 
-Once you have this, you will need to compile PHP using the `curl-http2-push` branch in the `dshafik/php-src` fork. First clone the `php/php-src` repo:
+Run nghttpd inside the container from a different terminal:
 
-```sh
-$ git clone https://github.com/php/php-src.git
+```
+$ docker run -ti $USER/php-http2-push-example nghttpd --htdocs=./curl-http2-dev --verbose --echo-upload --push=/index.html=/LICENSE --push=/index.html=/README.md 8443 ./curl-http2-dev/privkey.pem ./curl-http2-dev/server.pem
 ```
 
-Then add the fork, and check out the branch
+Run gdb:
 
-```sh
-$ git remote add dshafik https://github.com/dshafik/php-src.git
-$ git fetch --all
-$ git checkout dshafik/curl-http2-push
 ```
-
-Finally, compile PHP:
-
-```sh
-$ ./buildconf
-$ CFLAGS='-O0 -ggdb3' ./configure --disable-all --with-curl=/usr/local/Cellar/curl/7.45.0 --enable-debug
-$ make -j4
-```
-
-Once you've done this, you can execute `./sapi/cli/php` or `./sapi/phpdbg/phpdbg` with the patch,
-and compiled against the latest libcurl.
-
-Now, run the http2 server:
-
-```sh
-$ cd node-server
-$ npm install
-$ node index.js
-```
-
-In another terminal, test it with `nghttp`:
-
-```sh
-$ nghttp -n --max-concurrent-streams=2 --stat http://127.0.0.1:3000/nghttp
-``` 
-
-Finally, run the PHP script at the root of the checkout:
-
-```sh
-$ php ./push.php
+$ gdb --args php-src/sapi/cli/php ./php-http2-push-example/push.php https://localhost:8443/index.html 
+gdb> run
 ```
 
 ## Expected Behavior:
-It should spit out _at least_ some HTML, but preferably, some HTML and CSS (with the CSS being pushed)
+It should spit out three documents, and show a bunch of nghttpd output either intermingle, or if you're
+debugging it yourself, then the nghttpd output will be in the second terminal. 
 
 It should also show a `var_dump()` of the arguments passed to the closure.
 
 ## Actual Behavior
 
-It doesn't dump any HTML, but it does `var_dump()`. It then displays an error:
-
-```
-php(55493,0x7fff78e50300) malloc: *** error for object 0x10204ac00: pointer being freed was not allocated
-*** set a breakpoint in malloc_error_break to debug
-
-Program received signal SIGABRT, Aborted.
-0x00007fff8d188286 in __pthread_kill () from /usr/lib/system/libsystem_kernel.dylib
-```
+This currently works as expected except for some memory leaks
 
 ## Other Tests
 
