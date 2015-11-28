@@ -39,7 +39,6 @@ WORKDIR nghttp2
 RUN git checkout v1.4.0
 RUN autoreconf -i && automake && autoconf && ./configure && make && make install
 WORKDIR ..
-
 RUN git clone https://github.com/bagder/curl.git
 WORKDIR curl
 RUN ./buildconf && ./configure --with-nghttp2 --with-ssl --enable-debug
@@ -50,13 +49,18 @@ WORKDIR php-src
 RUN git checkout curl-http2-push && ./buildconf && ./configure --disable-all --enable-debug --with-curl && make
 WORKDIR ..
 RUN git clone https://github.com/dshafik/php-http2-push-example.git
+WORKDIR php-http2-push-example
+RUN npm install
+WORKDIR ..
 RUN git clone https://github.com/bagder/curl-http2-dev.git
 ENV LD_LIBRARY_PATH /usr/local/lib
 RUN apt-get install --yes vim gdb
 ENV SHEBANG '#!/bin/bash'
 RUN echo $SHEBANG > ./run.sh
+RUN echo "node ./php-http2-push-example/node-server/index.js" >> ./run.sh
 RUN echo "nghttpd --htdocs=./curl-http2-dev --verbose --echo-upload --push=/index.html=/LICENSE --push=/index.html=/README.md 8443 ./curl-http2-dev/privkey.pem ./curl-http2-dev/server.pem &" >> ./run.sh
 RUN echo "sleep 2" >> ./run.sh
 RUN echo "./php-src/sapi/cli/php ./php-http2-push-example/push.php https://localhost:8443/index.html" >> ./run.sh
+RUN echo "./php-src/sapi/cli/php ./php-http2-push-example/push.php https://localhost:8080/index.html" >> ./run.sh
 RUN chmod +x ./run.sh
 CMD echo "Running" && ./run.sh 

@@ -2,8 +2,8 @@
 $transfers = 1;
 
 $callback = function() use (&$transfers) {
+	return CURL_PUSH_DENY;
 	$transfers++;
-	return CURL_PUSH_OK;
 };
 
 $mh = curl_multi_init();
@@ -13,7 +13,8 @@ curl_multi_setopt($mh, CURLMOPT_PUSHFUNCTION, $callback);
 
 $ch = curl_init();
 curl_setopt($ch, CURLOPT_VERBOSE, 1);
-curl_setopt($ch, CURLOPT_URL, $_SERVER['argv'][1]);
+//curl_setopt($ch, CURLOPT_URL, $_SERVER['argv'][1]);
+curl_setopt($ch, CURLOPT_URL, 'https://localhost:8443/index.html');
 curl_setopt($ch, CURLOPT_HTTP_VERSION, 3);
 curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
 curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
