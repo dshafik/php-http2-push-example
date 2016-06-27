@@ -2,8 +2,9 @@ FROM ubuntu:15.10
 MAINTAINER Davey Shafik <dshafik@akamai.com>
 
 RUN apt-get update
-RUN apt-get install --yes build-essential bison wget 
-RUN apt-get install --yes git
+RUN apt-get install --yes build-essential bison wget git curl g++ make binutils autoconf automake autotools-dev libtool pkg-config \
+  zlib1g-dev libcunit1-dev libssl-dev libxml2-dev libev-dev libevent-dev libjansson-dev \
+  libjemalloc-dev vim gdb libnghttp2-dev 
 RUN set -ex \
   && for key in \
     9554F04D7259F04124DE6B476D5A82AC7E37093B \
@@ -18,7 +19,6 @@ RUN set -ex \
 
 ENV NPM_CONFIG_LOGLEVEL info
 ENV NODE_VERSION 5.0.0
-RUN apt-get install --yes curl
 RUN curl -SLO "https://nodejs.org/dist/v$NODE_VERSION/node-v$NODE_VERSION-linux-x64.tar.gz" \
   && curl -SLO "https://nodejs.org/dist/v$NODE_VERSION/SHASUMS256.txt.asc" \
   && gpg --verify SHASUMS256.txt.asc \
@@ -28,11 +28,9 @@ RUN curl -SLO "https://nodejs.org/dist/v$NODE_VERSION/node-v$NODE_VERSION-linux-
 RUN apt-get remove --yes curl
 
 RUN apt-get build-dep --yes curl
-RUN apt-get install --yes g++ make binutils autoconf automake autotools-dev libtool pkg-config \
-  zlib1g-dev libcunit1-dev libssl-dev libxml2-dev libev-dev libevent-dev libjansson-dev \
-  libjemalloc-dev 
 
 ENV CFLAGS -O0 -ggdb3
+ENV LD_LIBRARY_PATH /usr/local/lib
 
 RUN git clone https://github.com/tatsuhiro-t/nghttp2.git
 WORKDIR nghttp2
@@ -49,18 +47,10 @@ WORKDIR php-src
 RUN git checkout curl-http2-push && ./buildconf && ./configure --disable-all --enable-debug --with-curl && make
 WORKDIR ..
 RUN git clone https://github.com/dshafik/php-http2-push-example.git
-WORKDIR php-http2-push-example
+WORKDIR php-http2-push-example/node-server
 RUN npm install
-WORKDIR ..
+WORKDIR ../../
 RUN git clone https://github.com/bagder/curl-http2-dev.git
-ENV LD_LIBRARY_PATH /usr/local/lib
-RUN apt-get install --yes vim gdb
-ENV SHEBANG '#!/bin/bash'
-RUN echo $SHEBANG > ./run.sh
-RUN echo "node ./php-http2-push-example/node-server/index.js" >> ./run.sh
-RUN echo "nghttpd --htdocs=./curl-http2-dev --verbose --echo-upload --push=/index.html=/LICENSE --push=/index.html=/README.md 8443 ./curl-http2-dev/privkey.pem ./curl-http2-dev/server.pem &" >> ./run.sh
-RUN echo "sleep 2" >> ./run.sh
-RUN echo "./php-src/sapi/cli/php ./php-http2-push-example/push.php https://localhost:8443/index.html" >> ./run.sh
-RUN echo "./php-src/sapi/cli/php ./php-http2-push-example/push.php https://localhost:8080/index.html" >> ./run.sh
+COPY ./run.sh /run.sh
 RUN chmod +x ./run.sh
 CMD echo "Running" && ./run.sh 

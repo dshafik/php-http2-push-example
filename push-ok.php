@@ -2,8 +2,8 @@
 $transfers = 1;
 
 $callback = function() use (&$transfers) {
-	return CURL_PUSH_DENY;
 	$transfers++;
+	return CURL_PUSH_OK;
 };
 
 $mh = curl_multi_init();
